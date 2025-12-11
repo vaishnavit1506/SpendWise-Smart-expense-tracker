@@ -1,0 +1,69 @@
+/* Custom styles for SpendWise application */
+
+/* Override default Bootstrap spacing for better readability */
+.container {
+  padding: 1.25rem 1rem;
+}
+
+/* Card styles */
+.card {
+  border: none;
+  box-shadow: 0 0.5rem 1rem rgba(0, 0, 0, 0.15);
+  margin-bottom: 1.5rem;
+}
+
+.card-header {
+  border-bottom: 1px solid rgba(255, 255, 255, 0.125);
+  background-color: rgba(0, 0, 0, 0.1);
+}
+
+/* Progress bar animations */
+.progress-bar {
+  transition: width 1s ease-in-out;
+}
+
+/* Dashboard specific styles */
+.display-6 {
+  font-weight: 500;
+}
+
+/* Fade in animations for charts */
+canvas {
+  opacity: 0;
+  animation: fadeIn 0.8s forwards;
+}
+
+@keyframes fadeIn {
+  from { opacity: 0; }
+  to { opacity: 1; }
+}
+
+/* Form styles */
+textarea.form-control {
+  resize: none;
+}
+
+/* Table styles */
+.table-responsive {
+  border-radius: 0.25rem;
+  overflow: hidden;
+}
+
+/* Remove default outline for form inputs on focus while keeping accessibility */
+.form-control:focus, 
+.form-select:focus, 
+.btn:focus {
+  box-shadow: 0 0 0 0.15rem rgba(var(--bs-primary-rgb), 0.25);
+}
+
+/* Ensure consistent height for category and budget cards */
+.category-card {
+  min-height: 100px;
+}
+
+/* Ensure charts maintain proper height on smaller screens */
+@media (max-width: 768px) {
+  canvas {
+    min-height: 250px;
+  }
+}
