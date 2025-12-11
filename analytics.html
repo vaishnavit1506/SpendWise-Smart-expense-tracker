@@ -1,0 +1,229 @@
+{% extends "layout.html" %}
+
+{% block content %}
+<div class="row mb-3">
+    <div class="col">
+        <h2 class="mb-0">
+            <i class="fas fa-chart-pie me-2"></i>Analytics
+        </h2>
+        <p class="text-muted">Annual Overview - {{ year }}</p>
+    </div>
+    <div class="col-auto">
+        <form action="{{ url_for('analytics') }}" method="GET" class="d-flex align-items-center">
+            <select name="year" class="form-select form-select-sm me-2" style="width: auto;">
+                {% for y in range(year - 2, year + 3) %}
+                    <option value="{{ y }}" {% if y == year %}selected{% endif %}>{{ y }}</option>
+                {% endfor %}
+            </select>
+            <button type="submit" class="btn btn-sm btn-primary">View</button>
+        </form>
+    </div>
+</div>
+
+<div class="row g-3 mb-3">
+    <!-- Monthly & Category Charts Combined -->
+    <div class="col-12">
+        <div class="card">
+            <div class="card-header p-2">
+                <ul class="nav nav-tabs card-header-tabs" role="tablist">
+                    <li class="nav-item" role="presentation">
+                        <button class="nav-link active" id="monthly-tab" data-bs-toggle="tab" data-bs-target="#monthly" type="button" role="tab" aria-selected="true">Monthly Spending</button>
+                    </li>
+                    <li class="nav-item" role="presentation">
+                        <button class="nav-link" id="category-tab" data-bs-toggle="tab" data-bs-target="#category" type="button" role="tab" aria-selected="false">Category Breakdown</button>
+                    </li>
+                </ul>
+            </div>
+            <div class="card-body">
+                <div class="tab-content">
+                    <div class="tab-pane fade show active" id="monthly" role="tabpanel">
+                        <div style="height: 280px;">
+                            <canvas id="monthlyChart"></canvas>
+                        </div>
+                    </div>
+                    <div class="tab-pane fade" id="category" role="tabpanel">
+                        <div style="height: 280px;">
+                            <canvas id="categoryChart"></canvas>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+
+<!-- Data Tables -->
+<div class="row g-3">
+    <div class="col-md-6">
+        <div class="card h-100">
+            <div class="card-header py-2">
+                <h6 class="card-title mb-0">Monthly Summary</h6>
+            </div>
+            <div class="card-body p-0">
+                <div class="table-responsive">
+                    <table class="table table-sm table-hover mb-0">
+                        <thead>
+                            <tr>
+                                <th>Month</th>
+                                <th class="text-end">Total</th>
+                            </tr>
+                        </thead>
+                        <tbody>
+                            {% for item in monthly_data %}
+                            <tr>
+                                <td>{{ item.month }}</td>
+                                <td class="text-end">₹{{ "%.2f"|format(item.total) }}</td>
+                            </tr>
+                            {% endfor %}
+                        </tbody>
+                    </table>
+                </div>
+            </div>
+        </div>
+    </div>
+    
+    <div class="col-md-6">
+        <div class="card h-100">
+            <div class="card-header py-2">
+                <h6 class="card-title mb-0">Category Summary</h6>
+            </div>
+            <div class="card-body p-0">
+                <div class="table-responsive">
+                    <table class="table table-sm table-hover mb-0">
+                        <thead>
+                            <tr>
+                                <th>Category</th>
+                                <th class="text-end">Total</th>
+                                <th class="text-end">%</th>
+                            </tr>
+                        </thead>
+                        <tbody>
+                            {% set total_spending = category_data|sum(attribute='1') %}
+                            {% for category, total in category_data %}
+                            <tr>
+                                <td>{{ category }}</td>
+                                <td class="text-end">₹{{ "%.2f"|format(total) }}</td>
+                                <td class="text-end">{{ "%.1f"|format((total / total_spending * 100) if total_spending > 0 else 0) }}%</td>
+                            </tr>
+                            {% endfor %}
+                        </tbody>
+                    </table>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+{% endblock %}
+
+{% block scripts %}
+<script>
+document.addEventListener('DOMContentLoaded', function() {
+    Chart.defaults.color = '#999';
+    Chart.defaults.font.size = 11;
+    
+    // Monthly Spending Chart
+    const monthlyCtx = document.getElementById('monthlyChart').getContext('2d');
+    new Chart(monthlyCtx, {
+        type: 'bar',
+        data: {
+            labels: {{ months|safe }},
+            datasets: [{
+                label: 'Monthly Spending',
+                data: {{ monthly_totals|safe }},
+                backgroundColor: 'rgba(54, 162, 235, 0.7)',
+                borderColor: 'rgba(54, 162, 235, 1)',
+                borderWidth: 1,
+                borderRadius: 3,
+                maxBarThickness: 40
+            }]
+        },
+        options: {
+            responsive: true,
+            maintainAspectRatio: false,
+            plugins: {
+                legend: {
+                    display: false
+                },
+                tooltip: {
+                    callbacks: {
+                        label: function(context) {
+                            return '₹' + context.raw.toFixed(2);
+                        }
+                    }
+                }
+            },
+            scales: {
+                y: {
+                    beginAtZero: true,
+                    ticks: {
+                        callback: function(value) {
+                            if (value >= 1000) {
+                                return '₹' + (value/1000).toFixed(1) + 'k';
+                            }
+                            return '₹' + value;
+                        }
+                    }
+                },
+                x: {
+                    grid: {
+                        display: false
+                    }
+                }
+            }
+        }
+    });
+    
+    // Category Spending Chart
+    const categoryCtx = document.getElementById('categoryChart').getContext('2d');
+    new Chart(categoryCtx, {
+        type: 'doughnut',
+        data: {
+            labels: {{ category_names|safe }},
+            datasets: [{
+                data: {{ category_totals|safe }},
+                backgroundColor: [
+                    '#3498db', '#2ecc71', '#9b59b6', '#e74c3c', 
+                    '#f39c12', '#1abc9c', '#34495e', '#16a085'
+                ],
+                borderWidth: 0.5,
+                borderColor: 'rgba(255, 255, 255, 0.5)'
+            }]
+        },
+        options: {
+            responsive: true,
+            maintainAspectRatio: false,
+            cutout: '70%',
+            plugins: {
+                legend: {
+                    position: 'right',
+                    labels: {
+                        boxWidth: 10,
+                        padding: 10,
+                        usePointStyle: true,
+                        pointStyle: 'circle'
+                    }
+                },
+                tooltip: {
+                    callbacks: {
+                        label: function(context) {
+                            const label = context.label || '';
+                            const value = context.raw || 0;
+                            const total = context.chart.data.datasets[0].data.reduce((a, b) => a + b, 0);
+                            const percentage = Math.round((value / total) * 100);
+                            return `${label}: ₹${value.toFixed(2)} (${percentage}%)`;
+                        }
+                    }
+                }
+            }
+        }
+    });
+    
+    // Tab change event for chart resize
+    document.querySelectorAll('button[data-bs-toggle="tab"]').forEach(tab => {
+        tab.addEventListener('shown.bs.tab', event => {
+            window.dispatchEvent(new Event('resize'));
+        });
+    });
+});
+</script>
+{% endblock %}
